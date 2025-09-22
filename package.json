@@ -5,6 +5,9 @@
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "specify": "./dist/index.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -34,11 +37,14 @@
     "spec-driven-development",
     "sdd",
     "testing",
-    "toolkit"
+    "toolkit",
+    "cli",
+    "scaffold"
   ],
   "author": "苏雄 <yesuxiong.ysx@alibaba-inc.com>",
   "license": "MIT",
   "devDependencies": {
+    "@types/inquirer": "^9.0.9",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
@@ -49,7 +55,10 @@
     "typescript": "^5.0.0",
     "vitest": "^1.0.0"
   },
-  "dependencies": {},
+  "dependencies": {
+    "commander": "^14.0.1",
+    "inquirer": "^12.9.6"
+  },
   "engines": {
     "node": ">=16.0.0"
   },

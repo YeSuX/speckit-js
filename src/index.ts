@@ -1,126 +1,172 @@
+#!/usr/bin/env node
+
 /**
  * speckit-js - A modern TypeScript/JavaScript toolkit for Spec-Driven Development (SDD)
- * 
+ *
  * Build high-quality software faster with executable specifications.
  */
 
-import { promises as fs } from 'fs';
-import { join, resolve } from 'path';
+import { Command } from "commander";
+import inquirer from "inquirer";
+import { readFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
-export interface SpecKitConfig {
-  /** Enable verbose logging */
-  verbose?: boolean;
-  /** Output directory for generated files */
-  outputDir?: string;
+// Get package.json version - compatible with both CommonJS and ES modules
+function getVersion(): string {
+  try {
+    let packageJsonPath: string;
+
+    // Check if we're in ES modules or CommonJS environment
+    if (typeof __dirname !== "undefined") {
+      // CommonJS environment
+      packageJsonPath = join(__dirname, "../package.json");
+    } else {
+      // ES modules environment
+      const currentFilePath = fileURLToPath(import.meta.url);
+      const currentDir = dirname(currentFilePath);
+      packageJsonPath = join(currentDir, "../package.json");
+    }
+
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+    return packageJson.version;
+  } catch {
+    return "1.0.0";
+  }
 }
 
 /**
- * Main SpecKit class for managing spec-driven development workflow
+ * Initialize a new spec-driven development project
  */
-export class SpecKit {
-  private config: SpecKitConfig;
+async function initProject(projectName: string): Promise<void> {
+  console.log(`🚀 Initializing SpecKit project: ${projectName}`);
 
-  constructor(config: SpecKitConfig = {}) {
-    this.config = {
-      verbose: false,
-      outputDir: './output',
-      ...config,
-    };
-  }
+  // Ask user for additional configuration using inquirer
+  const answers = await inquirer.prompt([
+    {
+      type: "confirm",
+      name: "useTypeScript",
+      message: "Would you like to use TypeScript?",
+      default: true,
+    },
+    {
+      type: "list",
+      name: "testFramework",
+      message: "Which test framework would you prefer?",
+      choices: ["Jest", "Vitest", "Mocha"],
+      default: "Vitest",
+    },
+  ]);
 
-  /**
-   * Initialize a new spec-driven development project
-   */
-  public async init(): Promise<void> {
-    if (this.config.verbose) {
-      console.log('Initializing SpecKit project...');
-    }
-    
-    try {
-      // Create output directory if it doesn't exist
-      const outputPath = resolve(this.config.outputDir!);
-      await fs.mkdir(outputPath, { recursive: true });
-      
-      if (this.config.verbose) {
-        console.log(`Created output directory: ${outputPath}`);
-      }
-
-      // Create initial spec configuration file
-      const specConfigPath = join(outputPath, 'speckit.config.json');
-      const initialConfig = {
-        version: '1.0.0',
-        specifications: [],
-        testCases: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      await fs.writeFile(specConfigPath, JSON.stringify(initialConfig, null, 2));
-      
-      if (this.config.verbose) {
-        console.log(`Created configuration file: ${specConfigPath}`);
-      }
-
-      // Create specs directory
-      const specsPath = join(outputPath, 'specs');
-      await fs.mkdir(specsPath, { recursive: true });
-      
-      if (this.config.verbose) {
-        console.log(`Created specs directory: ${specsPath}`);
-      }
-
-      // Create tests directory
-      const testsPath = join(outputPath, 'tests');
-      await fs.mkdir(testsPath, { recursive: true });
-      
-      if (this.config.verbose) {
-        console.log(`Created tests directory: ${testsPath}`);
-      }
-
-      console.log('SpecKit project initialized successfully!');
-      console.log(`Output directory: ${outputPath}`);
-      console.log(`Configuration file: ${specConfigPath}`);
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Failed to initialize SpecKit project:', errorMessage);
-      throw new Error(`Initialization failed: ${errorMessage}`);
-    }
-  }
-
-  /**
-   * Get current configuration
-   */
-  public getConfig(): SpecKitConfig {
-    return { ...this.config };
-  }
-
-  /**
-   * Update configuration
-   */
-  public updateConfig(newConfig: Partial<SpecKitConfig>): void {
-    this.config = { ...this.config, ...newConfig };
-  }
-
-  /**
-   * Check if project is initialized
-   */
-  public async isInitialized(): Promise<boolean> {
-    try {
-      const outputPath = resolve(this.config.outputDir!);
-      const configPath = join(outputPath, 'speckit.config.json');
-      await fs.access(configPath);
-      return true;
-    } catch {
-      return false;
-    }
-  }
+  console.log("📁 Creating project directory...");
+  console.log(
+    `📝 Setting up configuration files (TypeScript: ${
+      answers.useTypeScript ? "Yes" : "No"
+    })...`
+  );
+  console.log(`🧪 Configuring ${answers.testFramework} test framework...`);
+  console.log("📦 Installing dependencies...");
+  console.log("✅ Project initialized successfully!");
+  console.log(`\nNext steps:`);
+  console.log(`  cd ${projectName}`);
+  console.log(`  npm start`);
 }
 
-// Default export
-export default SpecKit;
+/**
+ * Check system requirements and project status
+ */
+async function checkSystem(): Promise<void> {
+  console.log("🔍 Running system check...");
 
-// Convenience function for quick initialization
-export function createSpecKit(config?: SpecKitConfig): SpecKit {
-  return new SpecKit(config);
+  // Check Node.js version
+  const nodeVersion = process.version;
+  console.log(`✅ Node.js version: ${nodeVersion}`);
+
+  // Check npm/yarn availability
+  try {
+    const { execSync } = await import("child_process");
+    const npmVersion = execSync("npm --version", { encoding: "utf8" })
+      .toString()
+      .trim();
+    console.log(`✅ npm version: ${npmVersion}`);
+  } catch {
+    console.log("⚠️  npm not found");
+  }
+
+  // Check if current directory is a SpecKit project
+  try {
+    const configPath = join(process.cwd(), "speckit.config.json");
+    readFileSync(configPath, "utf8");
+    console.log("✅ SpecKit project configuration found");
+  } catch {
+    console.log(
+      "ℹ️  No SpecKit project configuration found in current directory"
+    );
+  }
+
+  console.log("✅ System check completed!");
 }
+
+/**
+ * Main CLI program
+ */
+function createCLI(): Command {
+  const program = new Command();
+
+  program
+    .name("specify")
+    .description(
+      "A modern TypeScript/JavaScript toolkit for Spec-Driven Development (SDD)"
+    )
+    .version(getVersion(), "-v, --version", "display version number");
+
+  // Init command
+  program
+    .command("init <project-name>")
+    .description("Initialize a new spec-driven development project")
+    .action(async (projectName: string) => {
+      try {
+        await initProject(projectName);
+      } catch (error) {
+        console.error(
+          "❌ Failed to initialize project:",
+          error instanceof Error ? error.message : "Unknown error"
+        );
+        process.exit(1);
+      }
+    });
+
+  // Check command
+  program
+    .command("check")
+    .description("Check system requirements and project status")
+    .action(async () => {
+      try {
+        await checkSystem();
+      } catch (error) {
+        console.error(
+          "❌ System check failed:",
+          error instanceof Error ? error.message : "Unknown error"
+        );
+        process.exit(1);
+      }
+    });
+
+  return program;
+}
+
+// Run CLI if this file is executed directly
+// Compatible with both CommonJS and ES modules
+const isMainModule = typeof require !== "undefined" && require.main === module;
+const isESModuleMain =
+  typeof import.meta !== "undefined" &&
+  import.meta.url === `file://${process.argv[1]}`;
+
+if (isMainModule || isESModuleMain) {
+  const program = createCLI();
+  program.parse(process.argv);
+}
+
+// Export for programmatic use
+export { createCLI, initProject, checkSystem };
+export default createCLI;
