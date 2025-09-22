@@ -48,61 +48,165 @@ interface ToolStatus {
 }
 
 /**
- * StepTracker class to track tool installation status
+ * Step interface for tracking individual steps
+ */
+interface Step {
+  key: string;
+  label: string;
+  status: "pending" | "running" | "done" | "error" | "skipped";
+  detail: string;
+}
+
+/**
+ * StepTracker class to track and render hierarchical steps without emojis,
+ * similar to Claude Code tree output. Supports live auto-refresh via an attached refresh callback.
  */
 class StepTracker {
   private title: string;
-  private tools: ToolStatus[] = [];
+  private steps: Step[] = [];
+  private statusOrder = {
+    pending: 0,
+    running: 1,
+    done: 2,
+    error: 3,
+    skipped: 4,
+  };
+  private refreshCallback: (() => void) | null = null;
 
   constructor(title: string) {
     this.title = title;
   }
 
-  add(name: string, description: string): void {
-    this.tools.push({
-      name,
-      description,
-      status: "pending",
-    });
+  /**
+   * Attach a refresh callback to trigger UI refresh
+   */
+  attachRefresh(callback: () => void): void {
+    this.refreshCallback = callback;
   }
 
-  setStatus(name: string, status: ToolStatus["status"], url?: string): void {
-    const tool = this.tools.find((t) => t.name === name);
-    if (tool) {
-      tool.status = status;
-      if (url) tool.url = url;
+  /**
+   * Add a new step if it doesn't already exist
+   */
+  add(key: string, label: string): void {
+    if (!this.steps.find((s) => s.key === key)) {
+      this.steps.push({ key, label, status: "pending", detail: "" });
+      this.maybeRefresh();
     }
   }
 
+  /**
+   * Start a step (set status to running)
+   */
+  start(key: string, detail: string = ""): void {
+    this.update(key, "running", detail);
+  }
+
+  /**
+   * Complete a step (set status to done)
+   */
+  complete(key: string, detail: string = ""): void {
+    this.update(key, "done", detail);
+  }
+
+  /**
+   * Mark a step as error
+   */
+  error(key: string, detail: string = ""): void {
+    this.update(key, "error", detail);
+  }
+
+  /**
+   * Skip a step
+   */
+  skip(key: string, detail: string = ""): void {
+    this.update(key, "skipped", detail);
+  }
+
+  /**
+   * Update step status and detail
+   */
+  private update(key: string, status: Step["status"], detail: string): void {
+    const step = this.steps.find((s) => s.key === key);
+    if (step) {
+      step.status = status;
+      if (detail) {
+        step.detail = detail;
+      }
+      this.maybeRefresh();
+      return;
+    }
+
+    // If not present, add it
+    this.steps.push({ key, label: key, status, detail });
+    this.maybeRefresh();
+  }
+
+  /**
+   * Trigger refresh callback if available
+   */
+  private maybeRefresh(): void {
+    if (this.refreshCallback) {
+      try {
+        this.refreshCallback();
+      } catch (error) {
+        // Silently ignore refresh errors
+      }
+    }
+  }
+
+  /**
+   * Render the step tree with colored output
+   */
   render(): string {
     const lines: string[] = [];
-    lines.push(chalk.bold(`\n${this.title}`));
-    lines.push(chalk.gray("─".repeat(this.title.length + 10)));
+    lines.push(chalk.cyan.bold(this.title));
 
-    for (const tool of this.tools) {
-      let statusIcon: string;
+    for (const step of this.steps) {
+      const label = step.label;
+      const detailText = step.detail.trim();
 
-      switch (tool.status) {
-        case "found":
-          statusIcon = "✅";
+      // Status symbols (circles)
+      let symbol: string;
+      switch (step.status) {
+        case "done":
+          symbol = chalk.green("●");
           break;
-        case "not_found":
-          statusIcon = "❌";
+        case "pending":
+          symbol = chalk.green.dim("○");
           break;
-        case "checking":
-          statusIcon = "🔍";
+        case "running":
+          symbol = chalk.cyan("○");
+          break;
+        case "error":
+          symbol = chalk.red("●");
+          break;
+        case "skipped":
+          symbol = chalk.yellow("○");
           break;
         default:
-          statusIcon = "⏳";
+          symbol = " ";
       }
 
-      const toolName = chalk.bold(tool.name);
-      const description = chalk.dim(tool.description);
-      lines.push(`${statusIcon} ${toolName} - ${description}`);
-
-      if (tool.status === "not_found" && tool.url) {
-        lines.push(chalk.dim(`   Install: ${tool.url}`));
+      let line: string;
+      if (step.status === "pending") {
+        // Entire line light gray (pending)
+        if (detailText) {
+          line = `${symbol} ${chalk.gray(`${label} (${detailText})`)}`;
+        } else {
+          line = `${symbol} ${chalk.gray(label)}`;
+        }
+      } else {
+        // Label white, detail (if any) light gray in parentheses
+        if (detailText) {
+          line = `${symbol} ${chalk.white(label)} ${chalk.gray(
+            `(${detailText})`
+          )}`;
+        } else {
+          line = `${symbol} ${chalk.white(label)}`;
+        }
       }
+
+      lines.push(`  ${line}`);
     }
 
     return lines.join("\n");
