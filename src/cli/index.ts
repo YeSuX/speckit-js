@@ -1,5 +1,6 @@
 import { program } from "commander";
 import { showBanner } from "../utils/showBanner";
+import { StepTracker } from "../core/StepTracker";
 
 async function main() {
   // 显示banner
@@ -27,6 +28,19 @@ async function main() {
     .description("正在检查已安装的工具...")
     .action(() => {
       showBanner();
+      const tracker = new StepTracker("检查已安装的工具");
+
+      tracker.add("git", "Git version control");
+      tracker.add("claude", "Claude Code CLI");
+      tracker.add("gemini", "Gemini CLI");
+      tracker.add("qwen", "Qwen Code CLI");
+      tracker.add("code", "VS Code (for GitHub Copilot)");
+      tracker.add("cursor-agent", "Cursor IDE agent (optional)");
+      tracker.add("windsurf", "Windsurf IDE (optional)");
+      tracker.add("opencode", "opencode");
+      tracker.add("codex", "Codex CLI");
+
+      tracker.display();
       // TODO: 实现构建逻辑
     });
 
