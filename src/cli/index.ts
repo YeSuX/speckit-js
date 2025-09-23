@@ -3,6 +3,19 @@ import { showBanner } from "../utils/showBanner";
 import { StepTracker } from "../core/StepTracker";
 import { checkToolForTracker } from "../utils/checkToolForTracker";
 
+// 工具配置
+const toolConfigs = [
+  { name: "git", description: "Git version control", url: "https://git-scm.com/downloads" },
+  { name: "claude", description: "Claude Code CLI", url: "https://docs.anthropic.com/en/docs/claude-code/setup" },
+  { name: "gemini", description: "Gemini CLI", url: "https://github.com/google-gemini/gemini-cli" },
+  { name: "qwen", description: "Qwen Code CLI", url: "https://github.com/QwenLM/qwen-code" },
+  { name: "code", description: "VS Code (for GitHub Copilot)", url: "https://code.visualstudio.com/" },
+  { name: "cursor-agent", description: "Cursor IDE agent (optional)", url: "https://cursor.sh/" },
+  { name: "windsurf", description: "Windsurf IDE (optional)", url: "https://windsurf.com/" },
+  { name: "opencode", description: "opencode", url: "https://opencode.ai/" },
+  { name: "codex", description: "Codex CLI", url: "https://github.com/openai/codex" }
+];
+
 async function main() {
   // 显示banner
   //   showBanner();
@@ -31,77 +44,40 @@ async function main() {
       showBanner();
       const tracker = new StepTracker("检查已安装的工具");
 
-      tracker.add("git", "Git version control");
-      tracker.add("claude", "Claude Code CLI");
-      tracker.add("gemini", "Gemini CLI");
-      tracker.add("qwen", "Qwen Code CLI");
-      tracker.add("code", "VS Code (for GitHub Copilot)");
-      tracker.add("cursor-agent", "Cursor IDE agent (optional)");
-      tracker.add("windsurf", "Windsurf IDE (optional)");
-      tracker.add("opencode", "opencode");
-      tracker.add("codex", "Codex CLI");
+      // 添加所有工具到跟踪器
+      toolConfigs.forEach((tool) => {
+        tracker.add(tool.name, tool.description);
+      });
 
-      // 转换后的工具检查逻辑
-      const gitOk = await checkToolForTracker(
-        "git",
-        "https://git-scm.com/downloads",
-        tracker
-      );
-      const claudeOk = await checkToolForTracker(
-        "claude",
-        "https://docs.anthropic.com/en/docs/claude-code/setup",
-        tracker
-      );
-      const geminiOk = await checkToolForTracker(
-        "gemini",
-        "https://github.com/google-gemini/gemini-cli",
-        tracker
-      );
-      const qwenOk = await checkToolForTracker(
-        "qwen",
-        "https://github.com/QwenLM/qwen-code",
-        tracker
-      );
+      // 存储检查结果
+      const results: Record<string, boolean> = {};
 
-      // VS Code 特殊逻辑：先检查 code，如果失败则检查 code-insiders
-      let codeOk = await checkToolForTracker(
-        "code",
-        "https://code.visualstudio.com/",
-        tracker
-      );
-      if (!codeOk) {
-        codeOk = await checkToolForTracker(
-          "code-insiders",
-          "https://code.visualstudio.com/insiders/",
-          tracker
-        );
+      // 检查大部分工具
+      for (const tool of toolConfigs) {
+        if (tool.name === "code") {
+          // VS Code 特殊逻辑：先检查 code，如果失败则检查 code-insiders
+          let codeOk = await checkToolForTracker("code", tool.url, tracker);
+          if (!codeOk) {
+            codeOk = await checkToolForTracker(
+              "code-insiders",
+              "https://code.visualstudio.com/insiders/",
+              tracker
+            );
+          }
+          results[tool.name] = codeOk;
+        } else {
+          results[tool.name] = await checkToolForTracker(
+            tool.name,
+            tool.url,
+            tracker
+          );
+        }
       }
-
-      const cursorOk = await checkToolForTracker(
-        "cursor-agent",
-        "https://cursor.sh/",
-        tracker
-      );
-      const windsurfOk = await checkToolForTracker(
-        "windsurf",
-        "https://windsurf.com/",
-        tracker
-      );
-      const opencodeOk = await checkToolForTracker(
-        "opencode",
-        "https://opencode.ai/",
-        tracker
-      );
-      const codexOk = await checkToolForTracker(
-        "codex",
-        "https://github.com/openai/codex",
-        tracker
-      );
 
       // 显示最终结果
       tracker.display();
 
-      // 可选：输出检查结果统计
+      // 输出检查结果统计
       const stats = tracker.getStatistics();
       console.log(
         `\n📊 检查完成: ${stats.done} 个工具可用, ${stats.error} 个工具缺失`
@@ -109,21 +85,24 @@ async function main() {
 
       console.log("\n\x1b[1m\x1b[32mSpeckit cli 已准备好使用!\x1b[0m");
 
-      if (!gitOk) {
+      // 提示信息
+      if (!results.git) {
         console.log("\x1b[2m提示：安装 git 进行存储库管理\x1b[0m");
       }
 
-      if (
-        !(
-          claudeOk ||
-          geminiOk ||
-          cursorOk ||
-          qwenOk ||
-          windsurfOk ||
-          opencodeOk ||
-          codexOk
-        )
-      ) {
+      // 检查是否有任何 AI 助手可用
+      const aiTools = [
+        "claude",
+        "gemini",
+        "cursor-agent",
+        "qwen",
+        "windsurf",
+        "opencode",
+        "codex",
+      ];
+      const hasAnyAI = aiTools.some((tool) => results[tool]);
+
+      if (!hasAnyAI) {
         console.log("\x1b[2m提示：安装 AI 助手以获得最佳体验\x1b[0m");
       }
     });
