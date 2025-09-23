@@ -1,4 +1,5 @@
 import { program } from "commander";
+import { showBanner } from "../utils/showBanner";
 
 async function main() {
   // 显示banner
@@ -22,10 +23,10 @@ async function main() {
     });
 
   program
-    .command("build")
-    .description("Build spec files")
+    .command("check")
+    .description("正在检查已安装的工具...")
     .action(() => {
-      console.log("🔨 Building spec files...");
+      showBanner();
       // TODO: 实现构建逻辑
     });
 
