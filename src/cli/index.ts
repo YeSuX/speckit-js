@@ -30,10 +30,56 @@ async function main() {
 
   // 添加基础命令
   program
-    .command("init")
-    .description("Initialize a new spec project")
-    .action(() => {
-      console.log("🎉 Initializing new spec project...");
+    .command("init [project-name]")
+    .description("初始化一个新的规范项目")
+    .option(
+      "--ai <assistant>",
+      "要使用的AI助手: claude, gemini, copilot, cursor, qwen, opencode, codex, 或 windsurf"
+    )
+    .option(
+      "--ignore-agent-tools",
+      "跳过AI代理工具检查（如Claude Code）",
+      false
+    )
+    .option("--no-git", "跳过git仓库初始化", false)
+    .option("--here", "在当前目录初始化项目而不是创建新目录", false)
+    .option("--skip-tls", "跳过SSL/TLS验证（不推荐）", false)
+    .option("--debug", "显示详细的网络和提取失败诊断输出", false)
+    .option(
+      "--github-token <token>",
+      "用于API请求的GitHub令牌（或设置GH_TOKEN或GITHUB_TOKEN环境变量）"
+    )
+    .action((projectName, options) => {
+      console.log("🎉 正在初始化新的规范项目...");
+
+      // 参数处理
+      const config = {
+        projectName: projectName || null, // 项目名称
+        aiAssistant: options.ai || null, // AI助手
+        scriptType: options.script || null, // 脚本类型
+        ignoreAgentTools: options.ignoreAgentTools || false, // 忽略代理工具
+        noGit: options.noGit || false, // 不使用git
+        here: options.here || false, // 在当前目录
+        skipTls: options.skipTls || false, // 跳过TLS
+        debug: options.debug || false, // 调试模式
+        githubToken:
+          options.githubToken ||
+          process.env.GH_TOKEN ||
+          process.env.GITHUB_TOKEN ||
+          null, // GitHub令牌
+      };
+
+      // 从最新模板初始化一个新的 Specify 项目。
+
+      //     此命令将会：
+      //     1. 检查所需工具是否已安装（git 是可选的）
+      //     2. 让您选择您的 AI 助手（Claude Code、Gemini CLI、GitHub Copilot、Cursor、Qwen Code、opencode、Codex CLI 或 Windsurf）
+      //     3. 从 GitHub 下载相应的模板
+      //     4. 将模板提取到新的项目目录或当前目录
+      //     5. 初始化一个全新的 git 仓库（如果没有使用 --no-git 且不存在现有仓库）
+      //     6. 可选择设置 AI 助手命令
+
+      console.log("配置信息:", config);
       // TODO: 实现初始化逻辑
     });
 
