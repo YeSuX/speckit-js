@@ -79,6 +79,23 @@ async function main() {
       //     5. 初始化一个全新的 git 仓库（如果没有使用 --no-git 且不存在现有仓库）
       //     6. 可选择设置 AI 助手命令
 
+      showBanner();
+
+      // 添加参数验证逻辑
+      if (config.here && config.projectName) {
+        console.error(
+          "\x1b[31mError:\x1b[0m 无法同时指定 [项目名称] 和 --here 标志"
+        );
+        process.exit(1);
+      }
+
+      if (!config.here && !config.projectName) {
+        console.error(
+          "\x1b[31mError:\x1b[0m 必须指定 [项目名称] 或使用 --here 标志"
+        );
+        process.exit(1);
+      }
+
       console.log("配置信息:", config);
       // TODO: 实现初始化逻辑
     });
