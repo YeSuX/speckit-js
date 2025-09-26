@@ -2,18 +2,53 @@ import { program } from "commander";
 import { showBanner } from "../utils/showBanner";
 import { StepTracker } from "../core/StepTracker";
 import { checkToolForTracker } from "../utils/checkToolForTracker";
+import { basename, resolve } from "path";
+import { existsSync, readdirSync, readFileSync } from "fs";
+import inquirer from "inquirer";
 
 // 工具配置
 const toolConfigs = [
-  { name: "git", description: "Git version control", url: "https://git-scm.com/downloads" },
-  { name: "claude", description: "Claude Code CLI", url: "https://docs.anthropic.com/en/docs/claude-code/setup" },
-  { name: "gemini", description: "Gemini CLI", url: "https://github.com/google-gemini/gemini-cli" },
-  { name: "qwen", description: "Qwen Code CLI", url: "https://github.com/QwenLM/qwen-code" },
-  { name: "code", description: "VS Code (for GitHub Copilot)", url: "https://code.visualstudio.com/" },
-  { name: "cursor-agent", description: "Cursor IDE agent (optional)", url: "https://cursor.sh/" },
-  { name: "windsurf", description: "Windsurf IDE (optional)", url: "https://windsurf.com/" },
+  {
+    name: "git",
+    description: "Git version control",
+    url: "https://git-scm.com/downloads",
+  },
+  {
+    name: "claude",
+    description: "Claude Code CLI",
+    url: "https://docs.anthropic.com/en/docs/claude-code/setup",
+  },
+  {
+    name: "gemini",
+    description: "Gemini CLI",
+    url: "https://github.com/google-gemini/gemini-cli",
+  },
+  {
+    name: "qwen",
+    description: "Qwen Code CLI",
+    url: "https://github.com/QwenLM/qwen-code",
+  },
+  {
+    name: "code",
+    description: "VS Code (for GitHub Copilot)",
+    url: "https://code.visualstudio.com/",
+  },
+  {
+    name: "cursor-agent",
+    description: "Cursor IDE agent (optional)",
+    url: "https://cursor.sh/",
+  },
+  {
+    name: "windsurf",
+    description: "Windsurf IDE (optional)",
+    url: "https://windsurf.com/",
+  },
   { name: "opencode", description: "opencode", url: "https://opencode.ai/" },
-  { name: "codex", description: "Codex CLI", url: "https://github.com/openai/codex" }
+  {
+    name: "codex",
+    description: "Codex CLI",
+    url: "https://github.com/openai/codex",
+  },
 ];
 
 async function main() {
@@ -49,7 +84,7 @@ async function main() {
       "--github-token <token>",
       "用于API请求的GitHub令牌（或设置GH_TOKEN或GITHUB_TOKEN环境变量）"
     )
-    .action((projectName, options) => {
+    .action(async (projectName, options) => {
       console.log("🎉 正在初始化新的规范项目...");
 
       // 参数处理
@@ -95,6 +130,52 @@ async function main() {
         );
         process.exit(1);
       }
+
+      let finalProjectName: string;
+      let projectPath: string;
+
+      if (config.here) {
+        finalProjectName = basename(process.cwd());
+        projectPath = process.cwd();
+
+        // 检查当前目录中是否有文件
+        const existingItems = readdirSync(projectPath);
+        if (existingItems.length > 0) {
+          console.log(
+            `\x1b[33mWarning:\x1b[0m 当前目录不为空，含有（${existingItems.length}) 个项目）)`
+          );
+
+          console.log(
+            "\x1b[33m模板文件将与现有内容合并，并可能覆盖现有文件\x1b[0m"
+          );
+
+          const { shouldContinue } = await inquirer.prompt([
+            {
+              type: "confirm",
+              name: "shouldContinue",
+              message: "是否继续？",
+              default: false,
+            },
+          ]);
+
+          if (!shouldContinue) {
+            console.log("\x1b[33m操作取消\x1b[0m");
+            process.exit(0);
+          }
+        }
+      } else {
+        finalProjectName = config.projectName;
+        projectPath = resolve(config.projectName);
+
+        if (existsSync(projectPath)) {
+          console.log(`\x1b[31mError:\x1b[0m '${projectName}' 项目已存在`);
+          process.exit(1);
+        }
+      }
+
+      console.log(
+        `🎉 正在初始化新的规范项目: ${finalProjectName} ${projectPath}`
+      );
     });
 
   program
